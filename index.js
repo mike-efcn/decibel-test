@@ -10,18 +10,19 @@ const normalize = (arr = []) => {
   return floats;
 };
 
-const getUserMedia = async () => new Promise((resolve) => {
-  window.navigator.getUserMedia(
-    {
-      audio: true,
-      // video: {
-      //   width: 320,
-      //   height: 240,
-      // },
-    },
-    (stream) => resolve(stream),
-    console.error,
-  );
+const init = async () => new Promise((resolve) => {
+  (async () => {
+    if (window.navigator.getUserMedia) {
+      window.navigator.getUserMedia(
+        { audio: true },
+        (stream) => resolve({ userMedia: stream, audioContext: new AudioContext() }),
+        console.error,
+      );
+    } else {
+      const stream = await window.navigator.mediaDevices.getUserMedia({ audio: true });
+      resolve({ userMedia: stream, audioContext: new webkitAudioContext() });
+    }
+  })();
 });
 
 const App = {
@@ -38,9 +39,8 @@ const App = {
     };
   },
   async mounted() {
-    const stream = await getUserMedia();
-    const audio = new AudioContext();
-    const source = audio.createMediaStreamSource(stream);
+    const { userMedia, audioContext: audio } = await init();
+    const source = audio.createMediaStreamSource(userMedia);
     const filter = audio.createBiquadFilter();
     source.connect(filter)
     const analyser = audio.createAnalyser();
